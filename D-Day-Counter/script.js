@@ -1,11 +1,10 @@
 const messageContainer = document.querySelector("#d-day-message");
-const container = document.querySelector("#d-day-container");
+const dateContainer = document.querySelector("#d-day-container");
 // 로컬스토리지에서 저장했던 데이터 가져오기
 const savedDate = localStorage.getItem("saved-date");
+const intervalArr = [];
 
-const intervalIdArr = [];
-
-container.style.display = "none";
+dateContainer.style.display = "none";
 messageContainer.innerHTML = "<h3>D-Day를 입력해 주세요.</h3>";
 
 // 목표 날짜를 만드는 함수
@@ -14,9 +13,8 @@ const dateForMaker = function () {
   const inputYear = document.querySelector("#target-year-input").value;
   const inputMonth = document.querySelector("#target-month-input").value;
   const inputDate = document.querySelector("#target-date-input").value;
-
   const dateFormat = `${inputYear}-${inputMonth}-${inputDate}`;
-  return dateFormat;
+  return dateFormat;  // 입력한 연/월/일을 return
 };
 
 // 카운터 만드는 함수
@@ -37,14 +35,14 @@ const counterMaker = function (data) {
 
   // 만약, remaining(남은 시간)이 0이라면, 타이머가 종료되었습니다. 출력
   if (remaining <= 0) {
-    container.style.display = "none";
+    dateContainer.style.display = "none";
     messageContainer.innerHTML = "<h3>타이머가 종료되었습니다.</h3>";
     messageContainer.style.display = "flex";
     setClearInterval();
     //함수를 종료시킴
     return;
   } else if (isNaN(remaining)) {
-    container.style.display = "none";
+    dateContainer.style.display = "none";
     // 만약, 잘못된 날짜가 들어왔다면, 유효한 시간대가 아닙니다. 출력
     messageContainer.innerHTML = "<h3>유효한 시간대가 아닙니다.</h3>";
     messageContainer.style.display = "flex";
@@ -54,7 +52,9 @@ const counterMaker = function (data) {
     return;
   }
 
-  // 남은 날짜
+  // 남은 시간: Math.floor(remaining / 3600);
+  // 일로 바꿔줘야 하니 / 24
+  // 시간 계산 객체
   const remainingObj = {
     remainingDate: Math.floor(remaining / 3600 / 24), // 남은 일을 가져옴 (Math.flooer = 소수점 내림)
     remainingHours: Math.floor(remaining / 3600) % 24, // 남은 시간을 가져옴
@@ -76,6 +76,8 @@ const counterMaker = function (data) {
   const documentArr = ["days", "hours", "min", "sec"];
 
   let i = 0;
+
+  // for...of (주로 배열에 사용)
   // html 태그에 일,월,분,초  표시
   for (let tag of documentArr) {
     const remainingTime = format(remainingObj[timeKeys[i]]);
@@ -86,12 +88,13 @@ const counterMaker = function (data) {
 };
 
 // 카운트다운 시작
-const starter = function (targetDateInput) {
+const starter = function (targetDateInput) {    // 세션값이 targetDateInput에 인자로 들어감
+  // 데이터가 없는 경우만 실행
   if (!targetDateInput) {
     // 목표 날짜를 가져옴
     targetDateInput = dateForMaker();
   }
-  container.style.display = "flex";
+  dateContainer.style.display = "flex";
   messageContainer.style.display = "none";
   // 타이머 초기화
   setClearInterval();
@@ -100,12 +103,9 @@ const starter = function (targetDateInput) {
   counterMaker(targetDateInput);
 
   //1초씩 증감하는 setInterval (반환값: setInterval의 고유한 id값)
-  const intervalId = setInterval(() => {
-    // 카운트다운 시작 함수 실행
-    counterMaker(targetDateInput);
-  }, 1000);
-  // intervalIdArr 에 intervalId push
-  intervalIdArr.push(intervalId);
+  const intervalId = setInterval(() => counterMaker(targetDateInput), 1000);
+  // intervalId 에는 각 리턴값이 담기게 됨
+  intervalArr.push(intervalId);
 };
 
 // setInterval 초기화
@@ -113,24 +113,24 @@ const setClearInterval = function () {
   //로컬 스토리지에 있던 데이터 삭제
   localStorage.removeItem("saved-date");
 
-  for (let i = 0; i < intervalIdArr.length; i++) {
+  for (let i = 0; i < intervalArr.length; i++) {
     // clearInterval(): 1초마다 증가하던 setInterval을 취소
-    clearInterval(intervalIdArr[i]);
+    clearInterval(intervalArr[i]);
   }
 };
 
 // 타이머 초기화
 const resetTimer = function () {
-  container.style.display = "none";
+  dateContainer.style.display = "none";
   messageContainer.innerHTML = "<h3>D-Day를 입력해 주세요.</h3>";
   messageContainer.style.display = "flex";
   setClearInterval();
 };
 
-// saveDate 가 있는지 여부(truthy)
+// 세션 데이터가 있다면 starter 함수 실행
 if (savedDate) {
   starter(savedDate);
 } else {
-  container.style.display = "none";
+  dateContainer.style.display = "none";
   messageContainer.innerHTML = "<h3>D-Day를 입력해 주세요.</h3>";
 }

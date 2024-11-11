@@ -1,12 +1,12 @@
+<!DOCTYPE html>
 <html lang="ko">
   <head>
     <title>D-Day</title>
-    <link href="./style.css" rel="stylesheet" />
-    <script src="./script.js" defer=""></script>
+    <link rel="stylesheet" href="./style.css">
   </head>
   <body>
     <h1>D-Day</h1>
-    <div id="d-day-container" style="display: none">
+    <div id="d-day-container">
       <div class="d-day-child-container">
         <span id="days">0</span>
         <span>일</span>
@@ -24,13 +24,17 @@
         <span>초</span>
       </div>
     </div>
-    <div id="d-day-message"><h3>D-Day를 입력해 주세요.</h3></div>
-    <div id="target-selector">
-      <input id="target-year-input" class="target-input" size="5" />
-      <input id="target-month-input" class="target-input" size="5" />
-      <input id="target-date-input" class="target-input" size="5" />
+
+    <div id="d-day-message"></div>
+
+    <div class="target-selector">
+      <input id="target-year-input" class="target-input" type="text" size="5"> - 
+      <input id="target-month-input" class="target-input" type="text" size="5"> - 
+      <input id="target-date-input" class="target-input" type="text" size="5">
     </div>
-    <button onclick="starter()" class="btn">카운트다운 시작</button>
-    <button onclick="resetTimer()" class="btn">타이머 초기화</button>
+    <button class="btn" onclick="starter()">카운트다운 시작</button>
+    <button class="btn" onclick="resetTimer()">타이머 초기화</button>
+
+    <script src="./script.js"></script>
   </body>
 </html>
