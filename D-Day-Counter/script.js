@@ -1,136 +1,127 @@
-const messageContainer = document.querySelector("#d-day-message");
-const dateContainer = document.querySelector("#d-day-container");
-// 로컬스토리지에서 저장했던 데이터 가져오기
-const savedDate = localStorage.getItem("saved-date");
-const intervalArr = [];
+const todoInput = document.querySelector("#todo-input");
+const todoList = document.querySelector("#todo-list");
+const savedTodoList = JSON.parse(localStorage.getItem("saved-item")); // JSON.parse : String을 배열로 변환
 
-dateContainer.style.display = "none";
-messageContainer.innerHTML = "<h3>D-Day를 입력해 주세요.</h3>";
-
-// 목표 날짜를 만드는 함수
-const dateForMaker = function () {
-  // input에 입력한 값을 가져옴
-  const inputYear = document.querySelector("#target-year-input").value;
-  const inputMonth = document.querySelector("#target-month-input").value;
-  const inputDate = document.querySelector("#target-date-input").value;
-  const dateFormat = `${inputYear}-${inputMonth}-${inputDate}`;
-  return dateFormat;  // 입력한 연/월/일을 return
-};
-
-// 카운터 만드는 함수
-const counterMaker = function (data) {
-  // 데이터와 로컬스토리지에 저장되어있는 데이터가 같지 않은 경우만 실행
-  if (data !== savedDate) {
-    // 로컬 스토리지에 저장
-    // 개발자도구 -> 어플리케이션 -> 로컬 스토리지에서 확인 가능
-    localStorage.setItem("saved-date", data);
+const createTodo = function(storageData) {
+  let todoContents = todoInput.value;
+  if(storageData) {
+    todoContents = storageData.contents;
   }
-  // 현재 날짜/시간을 가져옴
-  const nowDate = new Date();
-  // 원하는 날짜 데이터를 가져옴 (시간은 오전 9시를 기준으로 함)
-  // .setHours(0, 0, 0, 0) : 자정을 기준으로 하게 해줌
-  const targetDate = new Date(data).setHours(0, 0, 0, 0);
-  // 남은 시간 전체를 초로 변환하여 가져옴
-  const remaining = (targetDate - nowDate) / 1000;
+  const newLi = document.createElement("li");
+  const newSpan = document.createElement("span");
+  const newBtn = document.createElement("button");  // 완료버튼
 
-  // 만약, remaining(남은 시간)이 0이라면, 타이머가 종료되었습니다. 출력
-  if (remaining <= 0) {
-    dateContainer.style.display = "none";
-    messageContainer.innerHTML = "<h3>타이머가 종료되었습니다.</h3>";
-    messageContainer.style.display = "flex";
-    setClearInterval();
-    //함수를 종료시킴
-    return;
-  } else if (isNaN(remaining)) {
-    dateContainer.style.display = "none";
-    // 만약, 잘못된 날짜가 들어왔다면, 유효한 시간대가 아닙니다. 출력
-    messageContainer.innerHTML = "<h3>유효한 시간대가 아닙니다.</h3>";
-    messageContainer.style.display = "flex";
-    //타이머 초기화
-    setClearInterval();
-    //함수를 종료시킴
-    return;
+  // 완료버튼 클릭시 실행
+  newBtn.addEventListener("click", () => {
+    newLi.classList.toggle("complete"); // 버튼 클릭시 클래스명이 추가 되었다가, 삭제 되었다가 함(toggle)
+    saveItemsFn();  // contents의 complete 값이 바뀌었으므로 다시 저장함
+  });
+
+  newLi.addEventListener("dblclick", () => {
+    newLi.remove(); // 클릭된 li를 삭제
+    saveItemsFn();  // li가 하나 삭제 되었으므로 다시 저장함
+  });
+
+  // 아래에서 함수를 실행하며 storageData를 하나하나 가져올 건데,
+  // 그 storageData 에서 complete가 true이면 complete 클래스명을 추가해 준다.
+  if(storageData?.complete) { // 옵셔널체이닝을 통해 storageData가 있을 경우에만 실행
+    newLi.classList.add("complete");
   }
 
-  // 남은 시간: Math.floor(remaining / 3600);
-  // 일로 바꿔줘야 하니 / 24
-  // 시간 계산 객체
-  const remainingObj = {
-    remainingDate: Math.floor(remaining / 3600 / 24), // 남은 일을 가져옴 (Math.flooer = 소수점 내림)
-    remainingHours: Math.floor(remaining / 3600) % 24, // 남은 시간을 가져옴
-    remainingMin: Math.floor(remaining / 60) % 60, // 남은 분을 가져옴
-    remainingSec: Math.floor(remaining) % 60, // 남은 초를 가져옴
-  };
+  newSpan.textContent = todoContents;
+  newLi.appendChild(newBtn); // 하위 속성으로 추가
+  newLi.appendChild(newSpan);
+  todoList.appendChild(newLi);
+  todoInput.value = ""; // li 요소 추가 후 input 비우기
 
-  const timeKeys = Object.keys(remainingObj); //['remainingDate', 'remainingHours' ...]
-
-  // 남은 시간의 단위가 10 미만일 시 앞에 0 붙여주기
-  const format = function (time) {
-    if (time < 10) {
-      return "0" + time;
-    } else {
-      return time;
-    }
-  };
-
-  const documentArr = ["days", "hours", "min", "sec"];
-
-  let i = 0;
-
-  // for...of (주로 배열에 사용)
-  // html 태그에 일,월,분,초  표시
-  for (let tag of documentArr) {
-    const remainingTime = format(remainingObj[timeKeys[i]]);
-    // html 에서 tag("days", "hours", "min", "sec")가 id인 곳에 남은 날짜 표시
-    document.getElementById(tag).textContent = remainingTime;
-    i++;
-  }
-};
-
-// 카운트다운 시작
-const starter = function (targetDateInput) {    // 세션값이 targetDateInput에 인자로 들어감
-  // 데이터가 없는 경우만 실행
-  if (!targetDateInput) {
-    // 목표 날짜를 가져옴
-    targetDateInput = dateForMaker();
-  }
-  dateContainer.style.display = "flex";
-  messageContainer.style.display = "none";
-  // 타이머 초기화
-  setClearInterval();
-
-  // setInterval이 1초 뒤에 실행되기때문에 일단 한번 함수 실행
-  counterMaker(targetDateInput);
-
-  //1초씩 증감하는 setInterval (반환값: setInterval의 고유한 id값)
-  const intervalId = setInterval(() => counterMaker(targetDateInput), 1000);
-  // intervalId 에는 각 리턴값이 담기게 됨
-  intervalArr.push(intervalId);
-};
-
-// setInterval 초기화
-const setClearInterval = function () {
-  //로컬 스토리지에 있던 데이터 삭제
-  localStorage.removeItem("saved-date");
-
-  for (let i = 0; i < intervalArr.length; i++) {
-    // clearInterval(): 1초마다 증가하던 setInterval을 취소
-    clearInterval(intervalArr[i]);
-  }
-};
-
-// 타이머 초기화
-const resetTimer = function () {
-  dateContainer.style.display = "none";
-  messageContainer.innerHTML = "<h3>D-Day를 입력해 주세요.</h3>";
-  messageContainer.style.display = "flex";
-  setClearInterval();
-};
-
-// 세션 데이터가 있다면 starter 함수 실행
-if (savedDate) {
-  starter(savedDate);
-} else {
-  dateContainer.style.display = "none";
-  messageContainer.innerHTML = "<h3>D-Day를 입력해 주세요.</h3>";
+  saveItemsFn();
 }
+
+const keyCodeCheck = function(event) {  // 입력 이벤트를 받아옴
+  // 'Enter' 키가 눌렸을 때, 입력폼이 비어있지 않을 때만 실행
+  if (event.key === "Enter" && todoInput.value) { 
+    createTodo();
+  }
+}
+
+// todo 리스트 전체 삭제
+const deleteAll = function() {
+  const liList = document.querySelectorAll("li");
+  for (let i = 0; i < liList.length; i++) {
+    liList[i].remove();
+  }
+  saveItemsFn();  // contents의 갯수가 바뀌었으므로 다시 저장함
+}
+
+const saveItemsFn = function() {
+  const saveItems = [];
+  for (let i = 0; i < todoList.children.length; i++) {
+    const todoObj = {
+      contents: todoList.children[i].querySelector("span").textContent,
+      complete: todoList.children[i].classList.contains("complete") // complete 라는 클래스를 가지고 있는지 확인(return: Boolean)
+    }
+    saveItems.push(todoObj);
+  }
+
+  // 로컬스토리지에 저장
+  if(saveItems.length === 0) {
+    localStorage.removeItem("saved-item");
+  } else {
+    localStorage.setItem("saved-item", JSON.stringify(saveItems));  // JSON.stringfy: 배열을 String으로 변환
+  }
+  // 삼항연산자로 표현: saveItems.length === 0 ? localStorage.removeItem("saved-item") : localStorage.setItem("saved-item", JSON.stringify(saveItems));
+}
+
+if(savedTodoList) { // savedTodoList가 있다면
+  for (let i = 0; i < savedTodoList.length; i++) {  // savedTodoList의 길이(배열 안 갯수)만큼 반복 
+    createTodo(savedTodoList[i]);
+  }
+}
+
+const weatherSearch = function(position) {
+  // 프로토콜://도메인/경로(Path)?파라미터(요청을 보낼 때 필요한 데이터)
+  // * 비동기로 동작하는 함수는 then을 사용해서 응답을 받아올 때까지 기다려줘야 한다.
+  const openWeatherRes = fetch( // fetch : API 요청
+    `https://api.openweathermap.org/data/2.5/weather?lat=${position.latitude}&lon=${position.longitude}&exclude={part}&appid=85f05cb8ddb38b221d82bd263842f0ac`
+  ).then((res) => { // 응답이 오길 기다렸다가 받아옴
+    return res.json();  // 받아온 값을 json 으로 변환하여 return
+  })
+  .then((json) => {
+    console.log(json.name, json.weather[0].description);
+  })
+  .catch((err) => { // 요청이 제대로 이루어지지 않았다면 (*then을 수행하는 중 에러가 발생하면 catch로 이동)
+    console.error(err);
+  });
+}
+
+const accessToGeo = function(position) {
+  const positionObj = {
+    latitude: position.coords.latitude, // 위도 // position 안의 coords 안의 latitude 을 불러옴
+    longitude: position.coords.longitude, // 경도
+  }
+
+  weatherSearch(positionObj)  
+}
+
+const askForLocation = function() {
+  navigator.geolocation.getCurrentPosition(accessToGeo, (error) => {    // (위치에 접근 가능시 동작, 위치에 접근 불가능시 동작 콜백함수)
+    console.log(error);
+  });
+}
+
+askForLocation();
+
+
+
+// const promiseTest = function() {
+//   return new Promise((resolver, reject) => {
+//     setTimeout(() => {
+//       resolver("success!!!");
+//       // reject("error!!!");
+//     }, 2000);
+//   });
+// }
+
+// promiseTest().then((res) => {
+//   console.log(res);
+// });
